@@ -1,4 +1,4 @@
-const FOLDER_ID = "1axKHbvB-YbZdhZV9eKSzpm0oa8jqOjJX?hl=pt-br";
+const FOLDER_ID = "1axKHbvB-YbZdhZV9eKSzpm0oa8jqOjJX";
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
