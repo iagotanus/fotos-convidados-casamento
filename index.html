@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f8f5ef">
+    <meta name="description" content="Reviva os melhores momentos do nosso casamento e compartilhe suas fotos com a gente.">
+    <title>Nossos momentos | Fotos do casamento</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body id="top">
+    <header class="hero">
+      <div class="hero__content">
+        <p class="eyebrow">Um dia para guardar</p>
+        <h1>Nossos momentos,<br><em>do seu jeito.</em></h1>
+        <p class="hero__intro">Cada olhar, abraço e dança fez parte da nossa história. Veja as fotos do casamento e compartilhe os registros que você fez.</p>
+        <a class="button button--light" href="#enviar">Compartilhar minhas fotos <span aria-hidden="true">↓</span></a>
+        <p class="hero__date">Com carinho, os noivos</p>
+      </div>
+      <div class="hero__decoration" aria-hidden="true">
+        <span class="hero__sun"></span>
+        <span class="hero__leaf hero__leaf--one"></span>
+        <span class="hero__leaf hero__leaf--two"></span>
+        <span class="hero__leaf hero__leaf--three"></span>
+      </div>
+    </header>
+
+    <main>
+      <section class="gallery section-wrap" aria-labelledby="gallery-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow eyebrow--dark">Feito por todos nós</p>
+            <h2 id="gallery-title">A festa pelos<br><em>seus olhos.</em></h2>
+          </div>
+          <p class="section-heading__note">Uma coleção de momentos especiais, registrados por quem esteve com a gente.</p>
+        </div>
+        <div id="gallery-status" class="notice" role="status" aria-live="polite">Carregando as fotos…</div>
+        <div id="gallery-grid" class="gallery-grid" aria-label="Fotos do casamento"></div>
+      </section>
+
+      <section id="enviar" class="upload section-wrap" aria-labelledby="upload-title">
+        <div class="upload__copy">
+          <p class="eyebrow eyebrow--dark">Você também faz parte</p>
+          <h2 id="upload-title">Tem uma foto<br>que a gente <em>precisa ver?</em></h2>
+          <p>Envie seus registros para nossa coleção. Adoramos rever o dia por diferentes ângulos.</p>
+          <ul class="upload__details">
+            <li>JPG, PNG ou WebP</li>
+            <li>Até 8 MB por foto</li>
+            <li>As fotos serão exibidas nesta galeria</li>
+          </ul>
+        </div>
+        <form id="upload-form" class="upload-card">
+          <label class="file-picker" for="photo-file">
+            <span class="file-picker__icon" aria-hidden="true">+</span>
+            <span class="file-picker__title">Escolha uma foto</span>
+            <span id="file-name" class="file-picker__hint">JPG, PNG ou WebP, até 8 MB</span>
+            <input id="photo-file" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
+          </label>
+          <button id="upload-button" class="button button--dark" type="submit">Enviar foto <span aria-hidden="true">↗</span></button>
+          <p id="upload-status" class="upload-card__status" role="status" aria-live="polite">Você poderá enviar uma foto por vez.</p>
+          <iframe id="upload-frame" name="upload-frame" title="Retorno do envio da foto" class="visually-hidden"></iframe>
+        </form>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>Feito com carinho para guardar momentos especiais.</p>
+      <a href="#top" aria-label="Voltar ao início">Voltar ao início ↑</a>
+    </footer>
+  </body>
+</html>
