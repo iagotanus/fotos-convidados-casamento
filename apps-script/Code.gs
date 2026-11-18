@@ -1,4 +1,4 @@
-const FOLDER_ID = "1axKHbvB-YbZdhZV9eKSzpm0oa8jqOjJX?hl=pt-br";
+const FOLDER_ID = "1axKHbvB-YbZdhZV9eKSzpm0oa8jqOjJX";
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -25,9 +25,13 @@ function doGet(e) {
 }
 
 function doPost(e) {
+  const requestId = e && e.parameter ? e.parameter.requestId || "" : "";
   try {
     if (!e || !e.parameter || e.parameter.action !== "upload") {
       throw new Error("Solicitação de envio inválida.");
+    }
+    if (!/^[0-9a-f-]{36}$/i.test(requestId)) {
+      throw new Error("Identificador de envio inválido.");
     }
 
     const mimeType = e.parameter.mimeType;
@@ -51,10 +55,10 @@ function doPost(e) {
     const blob = Utilities.newBlob(bytes, mimeType, filename);
     const file = DriveApp.getFolderById(FOLDER_ID).createFile(blob);
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    return uploadResult_(true, "Foto enviada! Obrigado por compartilhar esse momento com a gente.");
+    return uploadResult_(true, "Foto enviada! Obrigado por compartilhar esse momento com a gente.", requestId);
   } catch (error) {
     console.error(error);
-    return uploadResult_(false, "Não foi possível enviar a foto. Confira o formato, o tamanho e tente novamente.");
+    return uploadResult_(false, "Não foi possível enviar a foto. Confira o formato, o tamanho e tente novamente.", requestId);
   }
 }
 
@@ -124,13 +128,14 @@ function jsonp_(callback, data) {
   return output.setMimeType(ContentService.MimeType.JAVASCRIPT);
 }
 
-function uploadResult_(success, message) {
+function uploadResult_(success, message, requestId) {
   const response = JSON.stringify({
     type: "wedding-photo-upload",
     success: success,
-    message: message
+    message: message,
+    requestId: requestId
   });
-  const html = "<!doctype html><html><body><script>window.parent.postMessage("
+  const html = "<!doctype html><html><body><script>window.top.postMessage("
     + response
     + ", '*');</script></body></html>";
   return HtmlService.createHtmlOutput(html)

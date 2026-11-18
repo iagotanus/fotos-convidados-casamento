@@ -98,15 +98,12 @@ uploadForm.addEventListener("submit", async (event) => {
 
   try {
     const dataUrl = await readFileAsDataUrl(file);
-    const payload = {
-      type: "wedding-photo-upload",
-      success: false,
-      message: "",
-    };
+    const requestId = crypto.randomUUID();
     const receiveMessage = (messageEvent) => {
-      if (messageEvent.source !== uploadFrame.contentWindow || messageEvent.data?.type !== payload.type) {
+      if (messageEvent.data?.type !== "wedding-photo-upload" || messageEvent.data.requestId !== requestId) {
         return;
       }
+      window.clearTimeout(responseTimeout);
       window.removeEventListener("message", receiveMessage);
       uploadButton.disabled = false;
       uploadButton.innerHTML = 'Enviar foto <span aria-hidden="true">↗</span>';
@@ -118,9 +115,16 @@ uploadForm.addEventListener("submit", async (event) => {
       }
     };
 
+    const responseTimeout = window.setTimeout(() => {
+      window.removeEventListener("message", receiveMessage);
+      uploadButton.disabled = false;
+      uploadButton.innerHTML = 'Enviar foto <span aria-hidden="true">↗</span>';
+      showUploadStatus("Não foi possível confirmar o envio. Confira a implantação do Apps Script e tente novamente.", "error");
+    }, 45000);
     window.addEventListener("message", receiveMessage);
     const formData = new FormData();
     formData.append("action", "upload");
+    formData.append("requestId", requestId);
     formData.append("name", file.name);
     formData.append("mimeType", file.type);
     formData.append("data", dataUrl.split(",")[1]);
@@ -142,14 +146,6 @@ uploadForm.addEventListener("submit", async (event) => {
     form.remove();
     uploadButton.textContent = "Enviando…";
     showUploadStatus("Enviando sua foto para o Drive…", "");
-
-    window.setTimeout(() => {
-      if (!uploadButton.disabled) return;
-      window.removeEventListener("message", receiveMessage);
-      uploadButton.disabled = false;
-      uploadButton.innerHTML = 'Enviar foto <span aria-hidden="true">↗</span>';
-      showUploadStatus("Não foi possível confirmar o envio. Confira a implantação do Apps Script e tente novamente.", "error");
-    }, 45000);
   } catch (error) {
     uploadButton.disabled = false;
     uploadButton.innerHTML = 'Enviar foto <span aria-hidden="true">↗</span>';
