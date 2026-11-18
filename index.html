@@ -56,12 +56,12 @@
         <form id="upload-form" class="upload-card">
           <label class="file-picker" for="photo-file">
             <span class="file-picker__icon" aria-hidden="true">+</span>
-            <span class="file-picker__title">Escolha uma foto</span>
+            <span class="file-picker__title">Escolha suas fotos</span>
             <span id="file-name" class="file-picker__hint">JPG, PNG ou WebP, até 8 MB</span>
-            <input id="photo-file" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
+            <input id="photo-file" name="photo" type="file" accept="image/jpeg,image/png,image/webp" multiple required>
           </label>
-          <button id="upload-button" class="button button--dark" type="submit">Enviar foto <span aria-hidden="true">↗</span></button>
-          <p id="upload-status" class="upload-card__status" role="status" aria-live="polite">Você poderá enviar uma foto por vez.</p>
+          <button id="upload-button" class="button button--dark" type="submit">Enviar fotos <span aria-hidden="true">↗</span></button>
+          <p id="upload-status" class="upload-card__status" role="status" aria-live="polite">Selecione várias fotos; cada uma pode ter até 8 MB.</p>
           <iframe id="upload-frame" name="upload-frame" title="Retorno do envio da foto" class="visually-hidden"></iframe>
         </form>
       </section>

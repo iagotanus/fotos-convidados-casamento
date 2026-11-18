@@ -26,6 +26,8 @@ function doGet(e) {
 
 function doPost(e) {
   const requestId = e && e.parameter ? e.parameter.requestId || "" : "";
+  let stage = "validating request";
+  console.log("UPLOAD_STARTED " + JSON.stringify({ requestId: requestId }));
   try {
     if (!e || !e.parameter || e.parameter.action !== "upload") {
       throw new Error("Solicitação de envio inválida.");
@@ -47,18 +49,29 @@ function doPost(e) {
     if (bytes.length > MAX_FILE_BYTES) {
       throw new Error("A imagem ultrapassa o limite de 8 MB.");
     }
+    stage = "validating image data";
     if (!hasValidImageSignature_(bytes, mimeType)) {
       throw new Error("O conteúdo do arquivo não corresponde ao formato informado.");
     }
 
     const filename = sanitizeFilename_(e.parameter.name, mimeType);
     const blob = Utilities.newBlob(bytes, mimeType, filename);
-    const file = DriveApp.getFolderById(FOLDER_ID).createFile(blob);
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    stage = "opening Drive folder";
+    const folder = DriveApp.getFolderById(FOLDER_ID);
+    stage = "saving file to Drive";
+    const file = folder.createFile(blob);
+    console.log("UPLOAD_SUCCEEDED " + JSON.stringify({ requestId: requestId, fileId: file.getId() }));
     return uploadResult_(true, "Foto enviada! Obrigado por compartilhar esse momento com a gente.", requestId);
   } catch (error) {
-    console.error(error);
-    return uploadResult_(false, "Não foi possível enviar a foto. Confira o formato, o tamanho e tente novamente.", requestId);
+    console.error("UPLOAD_FAILED " + JSON.stringify({
+      requestId: requestId,
+      stage: stage,
+      error: String(error),
+      stack: error && error.stack
+    }));
+    return uploadResult_(false, "Falha ao enviar ("
+      + stage
+      + "). Confira os registros de execução do Apps Script para ver o detalhe.", requestId);
   }
 }
 
@@ -96,31 +109,38 @@ function sanitizeFilename_(name, mimeType) {
 
 function hasValidImageSignature_(bytes, mimeType) {
   if (mimeType === "image/jpeg") {
-    return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+    return bytes.length >= 3
+      && unsignedByte_(bytes, 0) === 0xff
+      && unsignedByte_(bytes, 1) === 0xd8
+      && unsignedByte_(bytes, 2) === 0xff;
   }
   if (mimeType === "image/png") {
     return bytes.length >= 8
-      && bytes[0] === 0x89
-      && bytes[1] === 0x50
-      && bytes[2] === 0x4e
-      && bytes[3] === 0x47
-      && bytes[4] === 0x0d
-      && bytes[5] === 0x0a
-      && bytes[6] === 0x1a
-      && bytes[7] === 0x0a;
+      && unsignedByte_(bytes, 0) === 0x89
+      && unsignedByte_(bytes, 1) === 0x50
+      && unsignedByte_(bytes, 2) === 0x4e
+      && unsignedByte_(bytes, 3) === 0x47
+      && unsignedByte_(bytes, 4) === 0x0d
+      && unsignedByte_(bytes, 5) === 0x0a
+      && unsignedByte_(bytes, 6) === 0x1a
+      && unsignedByte_(bytes, 7) === 0x0a;
   }
   if (mimeType === "image/webp") {
     return bytes.length >= 12
-      && bytes[0] === 0x52
-      && bytes[1] === 0x49
-      && bytes[2] === 0x46
-      && bytes[3] === 0x46
-      && bytes[8] === 0x57
-      && bytes[9] === 0x45
-      && bytes[10] === 0x42
-      && bytes[11] === 0x50;
+      && unsignedByte_(bytes, 0) === 0x52
+      && unsignedByte_(bytes, 1) === 0x49
+      && unsignedByte_(bytes, 2) === 0x46
+      && unsignedByte_(bytes, 3) === 0x46
+      && unsignedByte_(bytes, 8) === 0x57
+      && unsignedByte_(bytes, 9) === 0x45
+      && unsignedByte_(bytes, 10) === 0x42
+      && unsignedByte_(bytes, 11) === 0x50;
   }
   return false;
+}
+
+function unsignedByte_(bytes, index) {
+  return bytes[index] & 0xff;
 }
 
 function jsonp_(callback, data) {

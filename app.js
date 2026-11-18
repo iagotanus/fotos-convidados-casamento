@@ -9,10 +9,14 @@ const photoInput = document.querySelector("#photo-file");
 const fileName = document.querySelector("#file-name");
 const uploadButton = document.querySelector("#upload-button");
 const uploadStatus = document.querySelector("#upload-status");
-const uploadFrame = document.querySelector("#upload-frame");
 
 photoInput.addEventListener("change", () => {
-  fileName.textContent = photoInput.files[0]?.name || "JPG, PNG ou WebP, até 8 MB";
+  const files = Array.from(photoInput.files);
+  fileName.textContent = files.length === 0
+    ? "JPG, PNG ou WebP, até 8 MB"
+    : files.length === 1
+      ? files[0].name
+      : `${files.length} fotos selecionadas`;
 });
 
 function showUploadStatus(message, state) {
@@ -74,17 +78,16 @@ function loadGallery() {
 
 uploadForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const file = photoInput.files[0];
-  if (!file) {
-    showUploadStatus("Escolha uma foto antes de enviar.", "error");
+  const files = Array.from(photoInput.files);
+  if (files.length === 0) {
+    showUploadStatus("Escolha pelo menos uma foto antes de enviar.", "error");
     return;
   }
-  if (!ALLOWED_TYPES.has(file.type)) {
-    showUploadStatus("Escolha uma imagem JPEG, PNG ou WebP.", "error");
-    return;
-  }
-  if (file.size > MAX_FILE_SIZE) {
-    showUploadStatus("A foto precisa ter até 8 MB.", "error");
+
+  const invalidFiles = files.filter((file) => !ALLOWED_TYPES.has(file.type) || file.size > MAX_FILE_SIZE);
+  if (invalidFiles.length > 0) {
+    const invalidNames = invalidFiles.map((file) => file.name).join(", ");
+    showUploadStatus(`Confira estas fotos: ${invalidNames}. Use imagens JPEG, PNG ou WebP de até 8 MB cada.`, "error");
     return;
   }
   if (!APPS_SCRIPT_URL) {
@@ -93,48 +96,80 @@ uploadForm.addEventListener("submit", async (event) => {
   }
 
   uploadButton.disabled = true;
-  uploadButton.textContent = "Preparando foto…";
-  showUploadStatus("Preparando sua foto para o envio…", "");
+  photoInput.disabled = true;
+  const failures = [];
 
-  try {
-    const dataUrl = await readFileAsDataUrl(file);
+  for (const [index, file] of files.entries()) {
+    uploadButton.textContent = `Enviando ${index + 1} de ${files.length}…`;
+    showUploadStatus(`Enviando ${file.name} (${index + 1} de ${files.length})…`, "");
+    try {
+      const result = await uploadFile(file);
+      if (!result.success) {
+        failures.push(`${file.name}: ${result.message}`);
+      }
+    } catch (error) {
+      failures.push(`${file.name}: ${error.message}`);
+    }
+  }
+
+  uploadButton.disabled = false;
+  photoInput.disabled = false;
+  uploadButton.innerHTML = 'Enviar fotos <span aria-hidden="true">↗</span>';
+  uploadForm.reset();
+  fileName.textContent = "JPG, PNG ou WebP, até 8 MB";
+
+  const successCount = files.length - failures.length;
+  if (failures.length > 0) {
+    showUploadStatus(
+      `${successCount} de ${files.length} fotos enviadas. Falhas: ${failures.join(" | ")}`,
+      successCount > 0 ? "" : "error"
+    );
+  } else {
+    showUploadStatus(`${successCount} ${successCount === 1 ? "foto enviada" : "fotos enviadas"} com sucesso!`, "success");
+  }
+  if (successCount > 0) {
+    window.setTimeout(loadGallery, 2500);
+  }
+});
+
+function uploadFile(file) {
+  return readFileAsDataUrl(file).then((dataUrl) => new Promise((resolve, reject) => {
     const requestId = crypto.randomUUID();
+    const uploadFrame = document.querySelector("#upload-frame");
+    let responseTimeout;
+
+    const cleanup = () => {
+      window.clearTimeout(responseTimeout);
+      window.removeEventListener("message", receiveMessage);
+    };
+
     const receiveMessage = (messageEvent) => {
       if (messageEvent.data?.type !== "wedding-photo-upload" || messageEvent.data.requestId !== requestId) {
         return;
       }
-      window.clearTimeout(responseTimeout);
-      window.removeEventListener("message", receiveMessage);
-      uploadButton.disabled = false;
-      uploadButton.innerHTML = 'Enviar foto <span aria-hidden="true">↗</span>';
-      showUploadStatus(messageEvent.data.message, messageEvent.data.success ? "success" : "error");
-      if (messageEvent.data.success) {
-        uploadForm.reset();
-        fileName.textContent = "JPG, PNG ou WebP, até 8 MB";
-        window.setTimeout(loadGallery, 2500);
-      }
+      cleanup();
+      resolve(messageEvent.data);
     };
 
-    const responseTimeout = window.setTimeout(() => {
-      window.removeEventListener("message", receiveMessage);
-      uploadButton.disabled = false;
-      uploadButton.innerHTML = 'Enviar foto <span aria-hidden="true">↗</span>';
-      showUploadStatus("Não foi possível confirmar o envio. Confira a implantação do Apps Script e tente novamente.", "error");
+    responseTimeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("Não foi possível confirmar o envio. Confira a implantação do Apps Script."));
     }, 45000);
     window.addEventListener("message", receiveMessage);
-    const formData = new FormData();
-    formData.append("action", "upload");
-    formData.append("requestId", requestId);
-    formData.append("name", file.name);
-    formData.append("mimeType", file.type);
-    formData.append("data", dataUrl.split(",")[1]);
 
     const form = document.createElement("form");
     form.method = "post";
     form.action = APPS_SCRIPT_URL;
-    form.target = "upload-frame";
+    form.target = uploadFrame.name;
     form.hidden = true;
-    for (const [name, value] of formData) {
+    const fields = {
+      action: "upload",
+      requestId,
+      name: file.name,
+      mimeType: file.type,
+      data: dataUrl.split(",")[1],
+    };
+    for (const [name, value] of Object.entries(fields)) {
       const input = document.createElement("input");
       input.type = "hidden";
       input.name = name;
@@ -142,16 +177,16 @@ uploadForm.addEventListener("submit", async (event) => {
       form.append(input);
     }
     document.body.append(form);
-    form.submit();
-    form.remove();
-    uploadButton.textContent = "Enviando…";
-    showUploadStatus("Enviando sua foto para o Drive…", "");
-  } catch (error) {
-    uploadButton.disabled = false;
-    uploadButton.innerHTML = 'Enviar foto <span aria-hidden="true">↗</span>';
-    showUploadStatus(`Não foi possível preparar a foto: ${error.message}`, "error");
-  }
-});
+    try {
+      form.submit();
+    } catch (error) {
+      cleanup();
+      reject(error);
+    } finally {
+      form.remove();
+    }
+  }));
+}
 
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
